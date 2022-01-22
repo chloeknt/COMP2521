@@ -1,0 +1,333 @@
+// COMP2521 21T2 Assignment 1
+// Dict.c ... implementation of the Dictionary ADT
+
+#include <assert.h>
+#include <stdbool.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+
+#include "Dict.h"
+#include "WFreq.h"
+
+
+typedef struct DictNode *Node;
+
+// Dictionary nodes 
+struct DictNode {
+    int frequency;
+    char *word;
+    int height;
+    Node left;  
+    Node right;
+};
+
+// Dictionary representation
+struct DictRep {
+    Node root;
+    int h_freq;
+};
+
+// Function prototypes 
+Node NewDictNode(char *word);
+void NodeFree(Node n);
+static void printDictNode(Node n); 
+Node DictNodeInsert(Dict d, Node n, char *word);
+void DictShowNode(Node n);
+int NodeFind(Node n, char *word);
+void NodeFreq(WFreq *wfs, Node curr, int *n, int i, int *num);
+int MaxInt(int a, int b);
+int height(Node n);
+int Balance(Node n);
+Node LeftRotate(Node x);
+Node RightRotate(Node y);
+
+// Creates a new Dictionary
+Dict DictNew(void) {
+    Dict new_root = malloc(sizeof(struct DictRep));
+    // Nothing present in new dictionary 
+    new_root->root = NULL;
+    // Highest frequency is currently 0 
+    new_root->h_freq = 0;
+    return new_root;
+}
+
+// Frees the given Dictionary
+void DictFree(Dict d) {
+    if (d->root == NULL) {
+        return;
+    }
+    // Free nodes first 
+    NodeFree(d->root);
+    free(d);
+}
+
+// Frees the nodes in the Dictionary 
+void NodeFree(Node n) {
+    if (n == NULL) {
+        return;
+    }
+    // Recursively free word in node and node itself 
+    NodeFree(n->left);
+    NodeFree(n->right);
+    free(n->word);
+    free(n);
+}
+
+// Creates a new node and returns it 
+Node NewDictNode(char *word) {
+    Node n = malloc(sizeof(struct DictNode));
+    // Malloc enough memory for the word and copy to n->word
+    n->word = malloc(strlen(word) + 1);
+    strcpy(n->word, word);
+    // Currently only one of this word exists 
+    n->frequency = 1;
+    n->right = NULL;
+    n->left = NULL;
+    // Set height to one 
+    n->height = 1;
+    return n;
+}
+
+// Inserts an occurrence of the given word into the Dictionary
+void DictInsert(Dict d, char *word) {
+    // If this is the first word, the h_freq is now 1
+    if (d->root == NULL) {
+        d->h_freq = 1;
+    }
+    // Insert nodes 
+    d->root = DictNodeInsert(d, d->root, word);
+}
+
+// Inserts node in the correct place lexicographically in the Dictionary 
+Node DictNodeInsert(Dict d, Node n, char *word) {
+    // If the word starts with the NULL character, return original 
+    // root unchanged
+    if (word[0] == 0) {
+        return n;
+    }
+    // If the current node is NULL, insert a new node 
+    if (n == NULL) {
+        return (NewDictNode(word));
+    }
+    // Find the appropriate placement of the new node lexicographically 
+    if (strcmp(word, n->word) < 0) {
+        n->left = DictNodeInsert(d, n->left, word);
+    } else if (strcmp(word, n->word) > 0) {
+        n->right =  DictNodeInsert(d, n->right, word);
+        // If word has already been inserted previously 
+    } else { 
+        // Increment n->frequency for that word 
+        n->frequency++;
+        // If this frequency surpasses the highest frequency, set this 
+        // as the new h_freq
+        if (n->frequency > d->h_freq) {
+            d->h_freq = n->frequency;
+        }
+        // return the node unchanged 
+        return n;
+    }
+    // Obtain the height of the current node 
+    n->height = 1 + MaxInt(height(n->left), height(n->right));
+    
+    // Obtain the balace of the current node 
+    int balance = Balance(n);
+    
+    // Tree is unbalanced: left left case
+    if (balance > 1 && strcmp(word, n->left->word) < 0) {
+        return RightRotate(n);
+    }
+    // Tree is unbalanced: right right case
+    if (balance < -1 && strcmp(word, n->right->word) > 0) {
+        return LeftRotate(n);
+    }
+    // Tree is unbalanced: left right case
+    if (balance > 1 && strcmp(word, n->left->word) > 0) {
+        n->left =  LeftRotate(n->left);
+        return RightRotate(n);
+    }
+    // Tree is unbalanced: right left case
+    if (balance < -1 && strcmp(word, n->right->word) < 0) {
+        n->right = RightRotate(n->right);
+        return LeftRotate(n);
+    }
+    
+    return n; 
+}
+
+// Return the height of the tree
+int height(Node n) {
+    if (n == NULL) {
+        return 0;
+    }
+    return n->height;
+}
+ 
+// Return maximum of two integers
+int MaxInt(int a, int b) {
+    if (a > b) {
+        return a;
+    } else {
+        return b;
+    } 
+}
+
+// Return balance of current node 
+int Balance(Node n) {
+    if (n == NULL) {
+        return 0;
+    }
+    return height(n->left) - height(n->right);
+}
+
+// Right rotate subtree rooted with n
+Node RightRotate(Node n) {
+    // Initialise pointers to nodes to rotate
+    Node new = n->left;
+    Node x = new->right;
+    // Rotate 
+    new->right = n;
+    n->left = x;
+    // Update heights
+    n->height = MaxInt(height(n->left), height(n->right)) + 1;
+    new->height = MaxInt(height(new->left), height(new->right)) + 1;
+ 
+    // Return new root
+    return new;
+}
+ 
+// Left rotate subtree rooted with n
+Node LeftRotate(Node n) {
+    // Initialise pointers to nodes to rotate
+    Node new = n->right;
+    Node x = new->left;
+    // Rotate
+    new->left = n;
+    n->right = x;
+    //  Update heights
+    n->height = MaxInt(height(n->left), height(n->right)) + 1;
+    new->height = MaxInt(height(new->left), height(new->right)) + 1;
+ 
+    // Return new root
+    return new;
+}
+
+
+// Returns the occurrence count of the given word. Returns 0 if the word
+// is not in the Dictionary.
+int DictFind(Dict d, char *word) {
+    int result = 0;
+    // If dictionary is empty 
+    if (d->root == NULL) {
+        return 0;
+        // If word is the root of the tree 
+    } else if (strcmp(word, d->root->word) == 0) { 
+        return d->root->frequency;
+    } else {
+        result = NodeFind(d->root, word);
+    } 
+    return result; 
+}
+
+// Traverses through nodes to find the occurence count of the word . Returns 0 
+// if word is not in the Dictionary 
+int NodeFind(Node n, char *word) {
+    int result = 0;
+    // If the word does not exist
+    if (n == NULL) {
+        return 0;
+        // Find the appropriate position in the dictionary according to
+        // lexicographic order 
+    } else if (strcmp(word, n->word) == 0) { 
+        return n->frequency;
+    } else if (strcmp(word, n->word) < 0) {
+        result = NodeFind(n->left, word);
+    } else if (strcmp(word, n->word) > 0) {
+        result = NodeFind(n->right, word);
+    }
+    return result; 
+}
+
+// Finds  the top `n` frequently occurring words in the given Dictionary
+// and stores them in the given  `wfs`  array  in  decreasing  order  of
+// frequency,  and then in increasing lexicographic order for words with
+// the same frequency. Returns the number of WFreq's stored in the given
+// array (this will be min(`n`, #words in the Dictionary)) in  case  the
+// Dictionary  does  not  contain enough words to fill the entire array.
+// Assumes that the `wfs` array has size `n`.
+int DictFindTopN(Dict d, WFreq *wfs, int n) {
+    // Counter to record how many words have been added into array
+    int num = 0;
+    // Number of words needed indicated by n
+    n = n + 1;
+    // Start searching for the highest frequency 
+    int i = d->h_freq;
+    // While frequencies are above 0 and num_words under n 
+    // go through the nodes 
+    while (i > 0 && n > 0) {
+        NodeFreq(wfs, d->root, &n, i, &num);
+        // After all words of that particular frequency are found, 
+        // decrement to a lower frequency
+        i--;
+    }
+    // Return number of words added to array
+    return num;
+}
+
+// Traverses through the nodes to find a specific frequency
+void NodeFreq(WFreq *wfs, Node curr, int *n, int i, int *num) {
+    if (curr == NULL) {
+        return;
+    }
+    // Traverse through the nodes lexicographically 
+    NodeFreq(wfs, curr->left, n, i, num);
+    // If words are still required and the specified frequency is found 
+    if (*n > 1 && curr->frequency == i) {
+        // Insert the word and frequency into the array
+        wfs[*num].word = curr->word;
+        wfs[*num].freq = curr->frequency;
+        // Decrement number of needed words, increment number of found words
+        *n = *n - 1;
+        *num = *num + 1;
+        // If the number of needed words becomes zero, return 
+        if (*n == 0) {
+            return;
+        }
+    }
+    NodeFreq(wfs, curr->right, n, i, num);
+}
+
+// Displays the given Dictionary. This is purely for debugging purposes,
+// so  you  may  display the Dictionary in any format you want.  You may
+// choose not to implement this.
+void DictShow(Dict d) {
+    // Empty dictionary 
+    if (d == NULL) {
+        return;
+    }
+    // Print out the words 
+    DictShowNode(d->root);
+    // Print out the highest frequency for cross-checking
+    printf("Highest frequency: %d\n", d->h_freq);
+}
+
+void DictShowNode(Node n) {
+    // If node is empty 
+    if (n == NULL) {
+        return;
+    }
+    // Print out the nodes using preorder traversal to check balancing works
+    printDictNode(n);
+    DictShowNode(n->left);
+    DictShowNode(n->right);
+}
+
+// Prints the value in the given node
+static void printDictNode(Node n) {
+    if (n == NULL) {
+        return;
+    }
+    // Print the current node 
+    printf("%d %s\n", n->frequency, n->word);
+}
+

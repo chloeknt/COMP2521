@@ -1,0 +1,214 @@
+// COMP2521 21T2 Assignment 1
+// tw.c ... compute top N most frequent words in file F
+// Usage: ./tw [Nwords] File
+
+#include <assert.h>
+#include <ctype.h>
+#include <stdbool.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+
+#include "Dict.h"
+#include "stemmer.h"
+#include "WFreq.h"
+
+#define MAXLINE 1000
+#define MAXWORD 100
+
+#define isWordChar(c) (isalnum(c) || (c) == '\'' || (c) == '-')
+
+// add function prototypes for your own functions here
+void stopword_dict(Dict stpw);
+char *delim_create(char *delims);
+void processing(char *line, Dict d, Dict stpw);
+//char *tokenise(char *word);
+void normalise(char *word);
+char *remove_single(char *word);
+char *remove_stopwords(char *word, Dict stpw);
+char *stem_words(char *word);
+
+int main(int argc, char *argv[]) {
+    int   nWords;    // number of top frequency words to show
+    char *fileName;  // name of file containing book text
+
+    // process command-line args
+    switch (argc) {
+        case 2:
+            nWords = 10;
+            fileName = argv[1];
+            break;
+        case 3:
+            nWords = atoi(argv[1]);
+            if (nWords < 10) nWords = 10;
+            fileName = argv[2];
+            break;
+        default:
+            fprintf(stderr,"Usage: %s [Nwords] File\n", argv[0]);
+            exit(EXIT_FAILURE);
+    }
+	
+    // File error checking
+    FILE *fp = fopen(fileName, "r");
+    if (fp == NULL) {
+        fprintf(stderr, "Can't open %s\n", fileName);
+        exit(EXIT_FAILURE);
+    }
+	
+    // Create a dictionary of stopwords
+    Dict stpw = DictNew();
+    stopword_dict(stpw);
+    // Create a new dictionary for words 
+    Dict d = DictNew();
+    rewind(fp);
+
+    // String for fgets usage
+    char line[MAXLINE + 1];
+    // Find *** START OF and *** END OF
+    // Process the words if *** START OF found
+    char *start = NULL;
+    char *end = NULL;
+    char start_str[MAXLINE] = "*** START OF";
+    char end_str[MAXLINE] = "*** END OF";
+    int begin = 0;
+    while (fgets(line, MAXLINE + 1, fp) != NULL) {
+        if (strstr(line, end_str) != NULL) {
+            end = strstr(line, end_str);
+            begin = 0;
+        } else if (begin == 1) {
+            processing(line, d, stpw);
+        } else if (strstr(line, start_str) != NULL) { 
+            start = strstr(line, start_str);
+            begin = 1;
+        }
+    }
+	
+    // Error checking for *** START OF and *** END OF
+    if (start == NULL || end == NULL) {
+        fprintf(stderr, "Not a Project Gutenberg book\n");
+        exit(EXIT_FAILURE);
+    } 
+	
+    // Create a wfs array and return number of members 
+    WFreq *wfs = malloc(nWords * sizeof(struct WFreq));
+    int max = DictFindTopN(d, wfs, nWords);
+    
+    // Print out the top nWords and respective frequencies
+    for (int i = 0; i < max; i++) {
+        printf("%d %s\n", wfs[i].freq, wfs[i].word);
+    }
+    
+    //Free dictionaries and arrays, close file
+    fclose(fp);
+    free(wfs);
+    DictFree(stpw);
+    DictFree(d);
+}
+
+// Create a dictionary using the stopwords file 
+void stopword_dict(Dict stpw) {
+    FILE *sw = fopen("stopwords", "r");
+    // File error checking
+    if (sw == NULL) {
+        fprintf(stderr, "Can't open stopwords\n");
+        exit(EXIT_FAILURE);
+    }
+    // Go through the file inserting all words 		
+    char stopword[MAXLINE + 1];
+    while (fgets(stopword, MAXLINE + 1, sw) != NULL) {
+        stopword[strlen(stopword) - 1] = '\0'; 
+        DictInsert(stpw, stopword); 
+    }
+    // Close file 	
+    fclose(sw);
+}
+
+//Preprocessing, includes tokenising, normalising, single/stopword removal 
+// word stemming and inserting into dictionary 
+void processing(char *line, Dict d, Dict stpw) {
+    // Separate lines into words using delimiters 
+    char *word = strtok(line, " !\"#$%&()*+`./:;<=>?@[\\]^_{|}~,");
+    while (word != NULL) { 
+        //word = tokenise(word);
+        normalise(word);
+        word = remove_single(word);
+        word = remove_stopwords(word, stpw);
+        word = stem_words(word);
+        // If the word is not a single letter or stopword, insert into 
+        // dictionary after processing 
+        if (word != NULL) {
+            DictInsert(d, word);
+        }
+        word = strtok(NULL, " !\"#$%&()*+`./:;<=>?@[\\]^_{|}~,");
+    }
+}
+
+//Remove anything other than alphabet, numbers, single quotes and hyphens
+char *tokenise(char *word) {
+    // Used to store approved characters
+    char *dest = malloc(strlen(word) + 1);
+    int i = 0;
+    int j = 0;
+    // Loop through the characters in the word
+    while (word[i] != '\0') {
+        // If current character is a permitted character, add to dest 
+        if (isWordChar(word[i])) {
+            dest[j] = word[i];
+            j++;
+        }
+        i++;
+    }
+    // Terminate dest and copy contents back into word to return
+    dest[j] = '\0';
+    strcpy(word, dest);
+    free(dest);
+    return word;
+}
+
+// Change everything into lower case
+void normalise(char *word) {
+    // Set the length of the string using strlen
+    int len = strlen(word);
+    // While loop for going through the string
+    int i = 0;
+    while (i < len) {
+        word[i] = tolower(word[i]);
+        i++;
+    }
+}
+
+//Remove all single letter words
+char *remove_single(char *word) {
+    // If length of word is one, return NULL
+    if (strlen(word) == 1) {
+        return NULL;
+    }
+    // Otherwise return word unchanged 
+    return word;
+}
+
+//Remove all stopwords indicated by stopwords file 
+char *remove_stopwords(char *word, Dict stpw) {
+    // If word is already NULL, return NULL
+    if (word == NULL) {
+        return NULL;
+    }
+    // If word is a stop word, return NULL
+    if (DictFind(stpw, word) != 0) { 
+        return NULL;
+    }
+    // Otherwise return word unchanged 
+    return word;
+}
+
+//Stem all words using stemmer.c
+char *stem_words(char *word) {
+    // If word is already NULL, return NULL
+    if (word == NULL) {
+        return NULL;
+    }
+    // Otherwise stem and return stemmed word 
+    stem(word, 0, strlen(word) - 1);
+    return word;
+}
+
