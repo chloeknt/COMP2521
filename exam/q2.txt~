@@ -1,0 +1,6 @@
+The most appropriate way to deal with collision in this case would be to use 
+separate chaining. Double hashing would not be appropriate because the scenerio's
+protaganist does not wish to resize the hash table, and double hashing requires
+this. Linear probing would not be suitable either because there is not enough index 
+space for 1,500 keys, as 1,000 < 1,500 and therefore resizing would be needed
+using this method as well. 

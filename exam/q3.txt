@@ -1,0 +1,7 @@
+A heap sort would be an ideal sort to use when there is a requirement
+to maintain an order for ease of extraction, such as for the smallest
+or largest value. As well as this, if memory usage was an issue, heapsort
+has a O(1) storage complexity, which is the lowest for most sorts. It is 
+also a very consistent sort, so it performs equally in the best, worst and 
+average cases so in a situation where a stable response time is required, 
+heap sort would be the best choice. 

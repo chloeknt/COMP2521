@@ -1,0 +1,4 @@
+Yes, a Euler path does exist for this graph. This is because a Euler path is 
+a path that goes through every edge of a graph exactly once. It doesn't 
+need to necessarily start and end at the same vertex. In this case, 
+a path as follows: {6, 5, 4, 3, 5, 7, 1, 3, 2, 1, 0, 7} is a Euler path. 

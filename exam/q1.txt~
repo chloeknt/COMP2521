@@ -1,0 +1,6 @@
+The most space efficient graph representation would be the array of edges 
+because it only requires O(E) storage, meaning only one per edge that exists.
+The other two possibilities, adjacency list and adjacency matrix requires more 
+memory space to implement. This is because matrixes need O(V*V) where V is the
+number of vertexes, and lists require the use of a linked list which requires 
+O(V + E) fro every vertex and edge pair that exists. 
