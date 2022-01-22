@@ -1,0 +1,27 @@
+
+NOTE:
+- Your time complexities should be expressed in big-O notation and be in
+  terms of n, where n is the number of cells in the maze.
+
+============
+  solveBfs
+============
+
+- Worst case time complexity: O(n^2)
+
+- Explanation: In the worst case scenerio, every cell needs to be checked. 
+Since this is a adjacency matrix implementation of a maze, to access all 
+the cells, it depends on the number of cells, n. Freeing is also a complexity
+of n, so n x n = n^2.
+
+============
+  solveDfs
+============
+
+- Worst case time complexity: O(n^2)
+
+- Explanation: In the worst case scenerio, every cell needs to be checked. 
+Since this is a adjacency matrix implementation of a maze, to access all 
+the cells, it depends on the number of cells, n. Freeing is also a complexity
+of n, so n x n = n^2.
+
