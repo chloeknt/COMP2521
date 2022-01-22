@@ -1,0 +1,151 @@
+// Centrality Measures API implementation
+// COMP2521 Assignment 2
+
+#include <assert.h>
+#include <stdio.h>
+#include <stdlib.h>
+
+#include "CentralityMeasures.h"
+#include "Dijkstra.h"
+#include "PQ.h"
+
+
+static bool isIsolated(ShortestPaths sps, double *reach);
+static int summation(ShortestPaths sps);
+static double numPaths(ShortestPaths sps, int v, int t, double *stvPaths);
+
+NodeValues closenessCentrality(Graph g) {
+    // Initialise NodeValues
+    NodeValues nvs;
+    nvs.numNodes = GraphNumVertices(g);
+    nvs.values = malloc(sizeof(double) * GraphNumVertices(g));
+    
+    // Calculating closeness centrality using Wasserman and Faust formula 
+    for (int u = 0; u < GraphNumVertices(g); u++) {
+        // Obtain pred and distance formulas 
+        ShortestPaths sps = dijkstra(g, u);
+        double reach = 0;
+        // Isolated case
+        if (isIsolated(sps, &reach)) {
+            nvs.values[u] = 0;
+        } else {
+            // Calculate n - 1 / N - 1
+            double calcOne = reach / (GraphNumVertices(g) - 1);
+            // Calculate n - 1 / the summation of all dist
+            double sum = summation(sps);
+            double calcTwo = reach / sum;
+            nvs.values[u] = calcOne * calcTwo;
+        }
+    }
+    return nvs;
+}
+
+// Function hecks if node is isolated, also updates reach value 
+static bool isIsolated(ShortestPaths sps, double *reach) {
+    int iso = 1;
+    for (int i = 0; i < sps.numNodes; i++) {
+        // If thre are no preds
+        if (sps.pred[i] != NULL) {
+            iso = 0;
+            *reach = *reach + 1;
+        }   
+    }
+    if (iso == 0) {
+        return false;
+    } else {
+        return true;
+    }
+}
+
+// Function sums all distances together
+static int summation(ShortestPaths sps) {
+    double sum = 0;
+    // Loops through all dist
+    for (int i = 0; i < sps.numNodes; i++) {
+        if (sps.dist[i] != INFINITY) {
+            sum += sps.dist[i];
+        }
+    }
+    return sum;
+}
+
+NodeValues betweennessCentrality(Graph g) {
+    // Initialise NodeValues
+    NodeValues nvs;
+    nvs.numNodes = GraphNumVertices(g);
+    nvs.values = malloc(sizeof(double) * GraphNumVertices(g));
+    // Loop through source vertexes
+    for (int s = 0; s < GraphNumVertices(g); s++) {
+        // Obtain pred array for each s
+        ShortestPaths sps = dijkstra(g, s);
+        // Loop through a particular vertex, v
+        for (int v = 0; v < GraphNumVertices(g); v++) {
+            // Loop through destination vertexes
+            for (int t = 0; t < GraphNumVertices(g); t++) {
+                // Count the number of paths and the ones that go through v
+                double stPaths = 0;
+                double stvPaths = 0;
+                // All vertexes cannot be equal 
+                if (s != v && t != v) {
+                    // Function counts paths from s->t and v->t
+                    stPaths = numPaths(sps, t, v, &stvPaths);
+                    // If the number of paths is zero
+                    if (stPaths == 0) {
+                        nvs.values[v] += 0;
+                        // Add the stv/st
+                    } else {
+                        nvs.values[v] += stvPaths / stPaths;
+                    }
+                }
+            }
+        }
+        freeShortestPaths(sps);
+    }
+    return nvs;
+}
+
+// Function counts number of paths and paths through v
+static double numPaths(ShortestPaths sps, int v, int t, double *stvPaths) {
+    double stPaths = 0;
+    // Only one path
+    if (v == sps.src) {
+        stPaths = 1.0;
+    } else {
+        // Go through the pred list while they exist for v
+        PredNode *curr = sps.pred[v];
+        while (curr != NULL) {
+            // Recurse through the preds 
+            stPaths += numPaths(sps, curr->v, t, stvPaths);
+            curr = curr->next;
+        }
+        // Until the dest vertex is reached
+        // It is known that this is definitely a path
+        if (v == t) {
+            *stvPaths += stPaths;
+        }
+    }
+    
+    return stPaths;
+}
+
+
+
+NodeValues betweennessCentralityNormalised(Graph g) {
+    NodeValues nvs = betweennessCentrality(g);
+    double num = GraphNumVertices(g);
+    for (int v = 0; v < GraphNumVertices(g); v++) {
+        double calcOne = 1 / ((num - 1) * (num - 2));
+        nvs.values[v] = nvs.values[v] * calcOne;
+    }
+    return nvs;
+}
+
+void showNodeValues(NodeValues nvs) {
+
+}
+
+void freeNodeValues(NodeValues nvs) {
+    // Free value array
+    free(nvs.values);
+}
+

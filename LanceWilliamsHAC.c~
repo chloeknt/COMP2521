@@ -1,0 +1,239 @@
+// Lance-Williams Algorithm for Hierarchical Agglomerative Clustering
+// COMP2521 Assignment 2
+
+#include <assert.h>
+#include <float.h>
+#include <limits.h>
+#include <stdio.h>
+#include <stdlib.h>
+
+#include "Graph.h"
+#include "LanceWilliamsHAC.h"
+
+#define INFINITY DBL_MAX
+
+static Dendrogram newDNode(int v);
+static int outWeight(Graph g, int i, int j);
+static int inWeight(Graph g, int i, int j);
+static double max(double a, double b);
+static bool dendIsOne(Graph g, Dendrogram *dendA);
+static Dendrogram mergeClusters(Dendrogram root, Dendrogram c1Copy, Dendrogram c2Copy);
+static Dendrogram copyDendrogram(Dendrogram root);
+
+/**
+ * Generates  a Dendrogram using the Lance-Williams algorithm (discussed
+ * in the spec) for the given graph  g  and  the  specified  method  for
+ * agglomerative  clustering. The method can be either SINGLE_LINKAGE or
+ * COMPLETE_LINKAGE (you only need to implement these two methods).
+ * 
+ * The function returns a 'Dendrogram' structure.
+ */
+Dendrogram LanceWilliamsHAC(Graph g, int method) {
+    // COMPLETE LINKAGE METHOD 
+    // Declare and initialise array of n x n
+    double dist[GraphNumVertices(g)][GraphNumVertices(g)];
+    // Create clusters for every vertex
+    // Dist(ci, cj) between each cluster
+    for (int i = 0; i < GraphNumVertices(g); i++) {
+        for (int j = 0; j < GraphNumVertices(g); j++) {
+            if (i == j) {
+                dist[i][j] = -1;
+            } else if (!GraphIsAdjacent(g, i, j) && !GraphIsAdjacent(g, j, i)) {
+                dist[i][j] = DBL_MAX;
+            } else if (GraphIsAdjacent(g, i, j) && GraphIsAdjacent(g, j, i)) {
+                dist[i][j] = 1.0 / max(inWeight(g, i, j), outWeight(g, i, j));
+            } else if (GraphIsAdjacent(g, i, j)) {
+                dist[i][j] = 1.0 / outWeight(g, i, j);
+            } else {
+                dist[i][j] = 1.0 / inWeight(g, i, j);
+            }
+        }
+    }
+    
+    // Create array of dendrograms 
+    Dendrogram dendA[GraphNumVertices(g)];
+    for (int v = 0; v < GraphNumVertices(g); v++) {
+        dendA[v] = newDNode(v);
+    }
+    
+    // Create list that keeps track of cluster members
+    bool cList[GraphNumVertices(g)][GraphNumVertices(g)];
+    for (int i = 0; i < GraphNumVertices(g); i++) {
+        for (int j = 0; j < GraphNumVertices(g); j++) {
+            if (i == j) {
+                cList[i][j] = true;
+            } else {
+                cList[i][j] = false;
+            }
+        }
+    }
+    
+    // Refers to the position of the final cluster
+    int final = 0;
+    // Loop while there is still more than one cluster
+    while (!dendIsOne(g, dendA)) {
+        double min = DBL_MAX;
+        // Find pair of clusters with smallest distance
+        int c1;
+        int c2;
+        for (int i = 0; i < GraphNumVertices(g); i++) {
+            for (int j = 0; j < GraphNumVertices(g); j++) {
+                if (dist[i][j] >= 0.0 && min >= dist[i][j]) {
+                    min = dist[i][j];
+                    c1 = i;
+                    c2 = j;
+                }
+            }
+        }
+        
+        // Make copies of the two clusters
+        Dendrogram c1Copy = copyDendrogram(dendA[c1]);
+        Dendrogram c2Copy = copyDendrogram(dendA[c2]);
+        
+        // Free the clusters and make pointers = NULL
+        freeDendrogram(dendA[c1]);
+        dendA[c1] = NULL;
+        freeDendrogram(dendA[c2]);
+        dendA[c2] = NULL;
+        
+        // Merge the clusters into c1 position
+        dendA[c1] = mergeClusters(dendA[c1], c1Copy, c2Copy);
+        
+        // Update cList
+        for (int v = 0; v < GraphNumVertices(g); v++) {
+            if (cList[c2][v]) {
+                cList[c1][v] = true;
+            }
+            cList[c2][v] = false;
+        }
+        
+        // Declare and initialise a temporary array to store new distances 
+        double tempDist[GraphNumVertices(g)][GraphNumVertices(g)];
+        for (int i = 0; i < GraphNumVertices(g); i++) {
+            for (int j = 0; j < GraphNumVertices(g); j++) {
+                tempDist[i][j] = -1;
+            }
+        }       
+        
+        // Calculate distance between the new cluster and every other cluster
+        for (int i = 0; i < GraphNumVertices(g); i++) {
+            for (int k = 0; k < GraphNumVertices(g); k++) {
+                // This means that vertex j is part of c1
+                // Find the maximum, which is complete linkage method
+                if (dist[i][k] != -1 && cList[c1][i] == true && dist[i][k] > tempDist[c1][k]) {
+                    tempDist[c1][k] = dist[i][k];
+                    tempDist[k][c1] = dist[i][k];
+                }
+            }
+        }
+        
+        // Put values back into original distance array
+        for (int i = 0; i < GraphNumVertices(g); i++) {
+            for (int j = 0; j < GraphNumVertices(g); j++) {
+                if (i != c2 && j != c2 && i != j && tempDist[i][j] != -1) {
+                    dist[i][j] = tempDist[i][j];
+                }
+                dist[c2][i] = -1.0;
+                dist[i][c2] = -1.0;
+            }
+        }
+       
+        // Set final to this newly merged cluster
+        final = c1;
+    }
+    // Return the dendrogram
+	return dendA[final];
+}
+
+// Function merges clusters together and returns new merged dendrogram
+static Dendrogram mergeClusters(Dendrogram root, Dendrogram c1Copy, Dendrogram c2Copy) {
+    // Make the head node -1
+    Dendrogram new = newDNode(-1);
+    new->right = c1Copy;
+    new->left = c2Copy;
+    root = new;
+    return root;
+}
+
+// Function copies all nodes of given dendrogram and returns copy
+static Dendrogram copyDendrogram(Dendrogram root) {
+    if (root == NULL) {
+        return NULL;
+    }
+    // Create a copy 
+    Dendrogram new = newDNode(root->vertex);
+    // Recursively clone
+    new->left = copyDendrogram(root->left);
+    new->right = copyDendrogram(root->right);
+    return new;
+}
+
+// Function creates a new dendrogram node with desired value and returns it
+static Dendrogram newDNode(int v) {
+    Dendrogram n = malloc(sizeof(struct DNode));
+    n->vertex = v;
+    n->right = NULL;
+    n->left = NULL;
+    return n;
+}
+
+// Function returns maximum of two numbers 
+static double max(double a, double b) {
+    if (a > b) {
+        return a;
+    } 
+    return b;
+}
+
+// Function returns the weight of i -> j
+static int outWeight(Graph g, int i, int j) {
+    AdjList curr = GraphOutIncident(g, i);
+    while (curr != NULL) {
+        if (j == curr->v) {
+            break;
+        }
+        curr = curr->next;
+    }
+    return curr->weight;
+}
+
+// Function returns the weight of i <- j
+static int inWeight(Graph g, int i, int j) {
+    AdjList curr = GraphInIncident(g, i);
+    while (curr != NULL) {
+        if (j == curr->v) {
+            break;
+        }
+        curr = curr->next;
+    }
+    return curr->weight;
+}
+
+// Function returns whether there is only one dendrogram left in array
+static bool dendIsOne(Graph g, Dendrogram *dendA) {
+    int count = 0;
+    for (int v = 0; v < GraphNumVertices(g); v++) {
+        if (dendA[v] != NULL) {
+            count++;
+        }
+        // Once count exceeds one, return false
+        if (count == 2) {
+            return false;
+        }
+    }
+    return true;
+}
+
+
+/**
+ * Frees all memory associated with the given Dendrogram structure.
+ */
+void freeDendrogram(Dendrogram d) {
+    if (d == NULL) {
+        return;
+    }
+    freeDendrogram(d->left);
+    freeDendrogram(d->right);
+    free(d);
+}
+
