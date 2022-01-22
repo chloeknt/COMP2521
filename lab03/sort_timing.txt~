@@ -1,0 +1,97 @@
+Input	Initial	Number	AvgTime		    AvgTime
+Size	Order	of Runs	for sortIntList	for sort
+10000	random	3	    0.12sec		    0.00sec
+10000	sorted	3	    0.00sec		    0.00sec
+10000	reverse	3	    0.00sec		    0.00sec
+20000	random	3	    0.55sec		    0.00sec
+20000	sorted	3	    0.00sec		    0.00sec
+20000	reverse	3	    0.00sec		    0.00sec
+40000	random	3	    3.11sec		    0.01sec
+40000	sorted	3	    0.02sec		    0.00sec
+40000	reverse	3	    0.00sec		    0.01sec
+50000	random	3	    5.76sec	        0.02sec
+50000	sorted	3	    0.02sec		    0.01sec
+50000	reverse	3	    0.01sec		    0.01sec
+60000	random	3	    10.08sec	    0.02sec     //Note for IntList random (stopped testing here)
+60000	sorted	3	    0.03sec		    0.01sec     When values entered are random, there is no set number
+60000	reverse	3	    0.01sec		    0.01sec     of traversals that IntListInsertInOrder will go through. In 
+70000	random	3	    -------	        0.03sec     almost all cases random will be more of a worst case scenerio
+70000	sorted	3	    0.03sec		    0.01sec     than sorted or reverse values. So in general, it is the first
+70000	reverse	3	    0.01sec		    0.01sec     to increase in terms of input size plotted against time, as
+80000	random	3	    -------	        0.03sec     more values are inserted, there are more values to traverse 
+80000	sorted	3	    0.03sec		    0.01sec     through. The graph will be similar to a exponential graph that
+80000	reverse	3	    0.01sec		    0.01sec     increases drastically at around the 40000 mark where it jumps 
+90000	random	3	    -------	        0.04sec     from < 1.0 to > 3.0. The time complexity of this would be O(n^2).
+90000	sorted	3	    0.04sec		    0.01sec     because there are two loops that are utilised if the input order
+90000	reverse	3	    0.01sec		    0.01sec     is random, one in the IntListSortedCopy function and the other 
+100000	random	3	    -------	        0.04sec     in the IntListInsertInOrder function. 
+100000	sorted	3	    0.04sec		    0.02sec   
+100000	reverse	3	    0.01sec		    0.02sec   
+200000	random	3	    -------	        0.10sec   
+200000	sorted	3	    0.09sec		    0.05sec  
+200000	reverse	3	    0.03sec		    0.04sec   
+300000	random	3	    -------	        0.15sec  
+300000	sorted	3	    0.12sec		    0.07sec     
+300000	reverse	3	    0.06sec		    0.07sec     
+400000	random	3	    -------	        0.22sec     
+400000	sorted	3	    0.14sec		    0.09sec
+400000	reverse	3	    0.08sec		    0.10sec
+500000	random	3	    -------	        0.29sec
+500000	sorted	3	    0.18sec		    0.12sec
+500000	reverse	3	    0.11sec		    0.13sec
+1000000	random	3	    -------	        0.56sec
+1000000	sorted	3	    0.33sec		    0.25sec
+1000000	reverse	3	    0.22sec		    0.26sec
+5000000	random	3	    -------	        3.79sec
+5000000	sorted	3	    1.38sec		    1.39sec
+5000000	reverse	3	    1.09sec		    1.43sec
+6000000	random	3	    -------	        4.86sec
+6000000	sorted	3	    1.64sec		    1.77sec
+6000000	reverse	3	    1.27sec		    1.76sec
+7000000	random	3	    -------	        5.56sec
+7000000	sorted	3	    1.87sec		    2.06sec
+7000000	reverse	3	    1.54sec		    2.00sec
+8000000	random	3	    -------	        5.97sec
+8000000	sorted	3	    2.15sec		    2.34sec
+8000000	reverse	3	    1.72sec		    2.31sec
+9000000	random	3	    -------	        7.08sec //Note for sort random
+9000000	sorted	3	    2.34sec		    2.60sec
+9000000	reverse	3	    1.92sec		    2.62sec
+10000000 random	3	    -------	        -------
+10000000 sorted	3	    2.81sec		    3.01sec
+10000000 reverse 3	    2.17sec		    2.97sec
+20000000 random	3	    -------	        -------
+20000000 sorted	3	    5.35sec		    6.41sec
+20000000 reverse 3	    4.48sec		    6.23sec
+30000000 random	3	    -------	        -------
+30000000 sorted	3	    8.25sec		    9.39sec //Note for sort sorted
+30000000 reverse 3	    6.51sec		    9.54sec //Note for sort reverse 
+40000000 random	3	    -------	        -------
+40000000 sorted	3	    10.55sec	    -------
+40000000 reverse 3      8.88sec		    -------
+50000000 random	3	    -------	        -------
+50000000 sorted	3	    13.46sec	    -------
+50000000 reverse 3	    11.09sec		------- 
+
+//Note for IntList sorted (stopped testing here)
+When the values are input in sorted order, regardless of the 
+values that are added to the list, the new node will always 
+be the new tail of the list. Since inserting at the tail 
+requires no traversals, only the movement of the tail pointer one 
+node forward, it will be one of the more efficient scenerios in terms of the 
+time against input number along with reverse order. 
+
+//Note for IntList reverse (stopped testing here)
+When the values are input in reverse order, regardless of the 
+values that are added to the list, the new node will always 
+be the new head of the list. Since inserting at the head 
+requires just the head pointer to point at the new node and no 
+traversals, it will be one of the more efficient in terms of the 
+time against input number. 
+
+//These both do still increase in terms of time as large numbers
+of values are input because processing that many values still requires
+time compared to way smaller numbers of input. The time complexity of 
+both scenerios would be O(n) as there is one loop which depends on the 
+number of inputs in the function IntListSortedCopy. 
+
